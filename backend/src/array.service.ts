@@ -15,7 +15,7 @@ export class ArrayService {
     attribute: string,
     val: string | number,
   ): DecisionSystem {
-    return cloneDeep(decisionSystem).filter((row) => {
+    return decisionSystem.filter((row) => {
       return row.attributes[attribute] === val;
     });
   }
@@ -24,7 +24,7 @@ export class ArrayService {
     decisionSystem: DecisionSystem,
     val: string | number,
   ): number {
-    const rowWithDecisionValue = cloneDeep(decisionSystem).filter((row) => {
+    const rowWithDecisionValue = decisionSystem.filter((row) => {
       return Object.values(row.decision)[0] === val;
     });
 
@@ -47,13 +47,16 @@ export class ArrayService {
       },
     );
 
+    const mostCommonDecisions = {};
+
     for (const key in groupedDecisions) {
       const element = groupedDecisions[key];
 
       const localDecisions: Record<string, number> = {};
 
-      element.forEach(({ attributes, decision }) => {
-        const decisionValue = Object.values(decision)[0];
+      element.forEach(({ decision }) => {
+        const [decisionValue] = Object.values(decision);
+
         if (isUndefined(localDecisions[decisionValue])) {
           localDecisions[decisionValue] = 1;
         }
@@ -68,16 +71,19 @@ export class ArrayService {
         [, Number.MIN_SAFE_INTEGER],
       );
 
-      if (Object.keys(localDecisions).length > 1) {
-        for (const row of decisionSystemCopy) {
-          if (isEqual(JSON.parse(key), row.attributes)) {
-            const decisionAttributeKey = Object.keys(row.decision)[0];
-
-            row.decision[decisionAttributeKey] = mostCommonDecision;
-          }
-        }
-      }
+      mostCommonDecisions[key] = mostCommonDecision;
     }
-    return this.getOnlyUniqueRows(decisionSystemCopy);
+
+    const mergedDecisions = decisionSystemCopy.map((r) => {
+      const key = JSON.stringify(r.attributes);
+      const [decisionKey] = Object.keys(r.decision);
+
+      return {
+        attributes: r.attributes,
+        decision: { [decisionKey]: mostCommonDecisions[key] },
+      };
+    });
+
+    return this.getOnlyUniqueRows(mergedDecisions);
   }
 }

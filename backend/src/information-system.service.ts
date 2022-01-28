@@ -2,7 +2,6 @@ import { Injectable } from '@nestjs/common';
 import {
   AssosciationRule,
   DecisionSystem,
-  DecisionSystemRow,
   InformationSystem,
 } from './models/InformationSystem';
 import { omit, uniq, cloneDeep, isEqual } from 'lodash';
@@ -55,62 +54,50 @@ export class InformationSystemService {
     decisionSystem: DecisionSystem,
     rowIndex: number,
   ): AssosciationRule {
-    let subTable = cloneDeep(decisionSystem); //deep copy
-    const d = Object.values(decisionSystem[rowIndex].decision)[0];
-    const attributes = Object.keys(decisionSystem[0].attributes);
+    let subTable = decisionSystem; //deep copy
+    const [d] = Object.values(decisionSystem[rowIndex].decision);
+    let attributes = Object.keys(decisionSystem[0].attributes);
+
     const rL = {};
     const rP = { ...decisionSystem[rowIndex].decision };
 
-    const originalRow = cloneDeep(decisionSystem[rowIndex]);
-    let currentSubTableIndex = rowIndex;
+    const originalRow = decisionSystem[rowIndex];
 
-    if (this.isDegenerated(subTable)) {
+    const isDegenerated = this.isDegenerated(subTable);
+
+    if (isDegenerated) {
       return undefined;
     }
 
     while (!this.isDegenerated(subTable)) {
-      const localHeuristicResults: Record<string, number> = attributes.reduce(
-        (acc, nextAttr) => {
-          const attrValueInRow =
-            subTable[currentSubTableIndex].attributes[nextAttr];
-          const localSubTable = this.arrayService.selectRowsWithAttributeValue(
-            subTable,
-            nextAttr,
-            attrValueInRow,
-          );
+      const localHeuristicResults = attributes.map((attr) => {
+        const attrValueInRow = originalRow.attributes[attr];
 
-          return {
-            ...acc,
-            [nextAttr]: this.heuristicService.m(localSubTable, d),
-          };
-        },
-        {},
-      );
+        const localSubTable = this.arrayService.selectRowsWithAttributeValue(
+          subTable,
+          attr,
+          attrValueInRow,
+        );
 
-      const nextDescriptorLocalValue = Object.values(
-        localHeuristicResults,
-      ).reduce((acc, value) => {
-        return acc < value ? acc : value;
-      }, Number.MAX_SAFE_INTEGER);
+        return {
+          localSubTable,
+          value: this.heuristicService.m(localSubTable, d),
+          attr,
+          attrValue: attrValueInRow,
+        };
+      });
 
-      const [nextDescriptorAttr] = Object.entries(localHeuristicResults).find(
-        ([key, value]) => value === nextDescriptorLocalValue,
-      );
+      localHeuristicResults.sort((a, b) => {
+        return a.value - b.value;
+      });
 
-      const nextDescriptorValue =
-        subTable[currentSubTableIndex].attributes[nextDescriptorAttr];
+      const [nextVal] = localHeuristicResults;
 
-      rL[nextDescriptorAttr] = nextDescriptorValue;
+      rL[nextVal.attr] = nextVal.attrValue;
 
-      subTable = this.arrayService.selectRowsWithAttributeValue(
-        subTable,
-        nextDescriptorAttr,
-        nextDescriptorValue,
-      );
+      subTable = nextVal.localSubTable;
 
-      currentSubTableIndex = subTable.findIndex((row) =>
-        isEqual(row, originalRow),
-      );
+      attributes = attributes.filter((x) => x !== nextVal.attr);
     }
 
     return {
@@ -125,8 +112,8 @@ export class InformationSystemService {
     const rules: AssosciationRule[] = [];
 
     decisionSystem.forEach((_, index) => {
-      console.log('row index', index);
       const rule = this.generateAssociationRuleForRow(decisionSystem, index);
+
       rules.push(rule);
     });
 
@@ -136,19 +123,11 @@ export class InformationSystemService {
   generateAssociationRulesForInformationSystem(
     informationSystem: InformationSystem,
   ) {
-    const setOfAllRules: AssosciationRule[] = [];
+    const setOfAllRules: any[] = [];
 
     const decisionSystems = this.convertToDecisionSystems(informationSystem);
-    decisionSystems.forEach((d) =>
-      console.log(
-        'decisionSystems',
-        d.length,
-        Object.keys(d[0].attributes).length,
-      ),
-    );
 
     decisionSystems.forEach((decisionSystem, i) => {
-      console.log(i);
       const rules = this.generateAllAssociationRulesForSystem(decisionSystem);
 
       const onlyRulesProperlyGenerated: AssosciationRule[] =
@@ -159,15 +138,30 @@ export class InformationSystemService {
 
     const uniqueRows = this.arrayService.getOnlyUniqueRows(setOfAllRules);
 
+    const { length, support, sumSupport, sumLength } = uniqueRows.reduce(
+      (acc, r) => ({
+        length: [...acc.length, r.length],
+        support: [...acc.support, r.support],
+        sumSupport: acc.sumSupport + r.support,
+        sumLength: acc.sumLength + r.length,
+      }),
+      {
+        sumSupport: 0,
+        sumLength: 0,
+        length: [],
+        support: [],
+      },
+    );
+
     return {
       rules: uniqueRows,
       summary: {
-        avgLength:
-          uniqueRows.reduce((acc, prev) => acc + prev.length, 0) /
-          uniqueRows.length,
-        avgSupport:
-          uniqueRows.reduce((acc, prev) => acc + prev.support, 0) /
-          uniqueRows.length,
+        avgLength: sumLength / uniqueRows.length,
+        avgSupport: sumSupport / uniqueRows.length,
+        minLength: Math.min(...length),
+        maxLength: Math.max(...length),
+        maxSupport: Math.max(...support),
+        minSupport: Math.min(...support),
       },
     };
   }
