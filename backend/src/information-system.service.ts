@@ -4,7 +4,7 @@ import {
   DecisionSystem,
   InformationSystem,
 } from './models/InformationSystem';
-import { omit, uniq, cloneDeep, isEqual } from 'lodash';
+import { omit, uniq, cloneDeep, isEqual, isUndefined } from 'lodash';
 import { ArrayService } from './array.service';
 import { HeuristicService } from './heuristic.service';
 
@@ -70,22 +70,24 @@ export class InformationSystemService {
     }
 
     while (!this.isDegenerated(subTable)) {
-      const localHeuristicResults = attributes.map((attr) => {
-        const attrValueInRow = originalRow.attributes[attr];
+      const localHeuristicResults = attributes
+        .map((attr) => {
+          const attrValueInRow = originalRow.attributes[attr];
 
-        const localSubTable = this.arrayService.selectRowsWithAttributeValue(
-          subTable,
-          attr,
-          attrValueInRow,
-        );
+          const localSubTable = this.arrayService.selectRowsWithAttributeValue(
+            subTable,
+            attr,
+            attrValueInRow,
+          );
 
-        return {
-          localSubTable,
-          value: this.heuristicService.m(localSubTable, d),
-          attr,
-          attrValue: attrValueInRow,
-        };
-      });
+          return {
+            localSubTable,
+            value: this.heuristicService.m(localSubTable, d),
+            attr,
+            attrValue: attrValueInRow,
+          };
+        })
+        .filter((row) => !isUndefined(row.value));
 
       localHeuristicResults.sort((a, b) => {
         return a.value - b.value;
