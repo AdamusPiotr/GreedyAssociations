@@ -19,7 +19,12 @@ export class AppController {
 
   @Get()
   getHello(): string {
-    return 'Hello';
+    return 'Server works';
+  }
+
+  @Get('health')
+  healthCheck() {
+    return 'health';
   }
 
   @Post('fileUpload')
