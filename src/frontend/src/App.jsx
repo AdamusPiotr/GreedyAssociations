@@ -8,6 +8,8 @@ import HeuristicTypesRadios from "./components/HeuristicTypesRadios.jsx";
 import InformationSystemTable from "./components/InformationSystemTable.jsx";
 import Modal from "./components/Modal.jsx";
 
+const apiUrl = process.env.API_URL || "localhost:3001";
+
 function App() {
   const [associationRules, setAssociationRules] = useState([]);
   const [files, setFiles] = useState([]);
@@ -29,19 +31,14 @@ function App() {
   const processInputs = async () => {
     formData.current.delete("files");
     files.forEach((file) => {
-      console.log(file);
       formData.current.append("files", file);
     });
 
-    const resp = await axios.post(
-      "http://localhost:3001/fileUpload",
-      formData.current,
-      {
-        headers: {
-          "Content-Type": "multipart/form-data",
-        },
-      }
-    );
+    const resp = await axios.post(`${apiUrl}/fileUpload`, formData.current, {
+      headers: {
+        "Content-Type": "multipart/form-data",
+      },
+    });
 
     console.log("resp.data", resp.data[0].systemInfo);
 
@@ -53,15 +50,11 @@ function App() {
 
     formData.append("file", file);
 
-    const resp = await axios.post(
-      "http://localhost:3001/system-lookup",
-      formData,
-      {
-        headers: {
-          "Content-Type": "multipart/form-data",
-        },
-      }
-    );
+    const resp = await axios.post(`${apiUrl}/system-lookup`, formData, {
+      headers: {
+        "Content-Type": "multipart/form-data",
+      },
+    });
 
     setInformationSystem(resp.data);
   };
