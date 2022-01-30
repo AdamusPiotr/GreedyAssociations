@@ -6,6 +6,7 @@ async function bootstrap() {
   app.enableCors();
 
   console.log('process.env.PORT', process.env.PORT);
-  await app.listen(process.env.PORT || 3001);
+  const server = await app.listen(process.env.PORT || 3001);
+  server.setTimeout(1800000); // 600,000=> 10Min, 1200,000=>20Min, 1800,000=>30Min
 }
 bootstrap();
