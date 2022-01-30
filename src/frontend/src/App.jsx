@@ -8,7 +8,7 @@ import HeuristicTypesRadios from "./components/HeuristicTypesRadios.jsx";
 import InformationSystemTable from "./components/InformationSystemTable.jsx";
 import Modal from "./components/Modal.jsx";
 
-const apiUrl = process.env.API_URL || "localhost:3001";
+const apiUrl = process.env.REACT_APP_API_URL || "localhost:3001";
 
 function App() {
   const [associationRules, setAssociationRules] = useState([]);
