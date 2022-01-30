@@ -14,7 +14,7 @@ jobs:
           heroku_app_name: "greedy-association-api"
           heroku_email: ${{secrets.HEROKU_API_KEY}}
         env:
-          HD_APP_BASE: "backend"
+          HD_APP_BASE: "src/backend"
       - name: Release Web Client
         uses: akhileshns/heroku-deploy@v3.0.4
         with:
@@ -22,5 +22,5 @@ jobs:
           heroku_app_name: "greedy-association-web"
           heroku_email: ${{secrets.HEROKU_API_KEY}}
         env:
-          HD_APP_BASE: "frontend"
+          HD_APP_BASE: "src/frontend"
           HD_REACT_APP_API_URL: "greedy-association-api"
