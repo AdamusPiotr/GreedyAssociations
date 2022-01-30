@@ -22,5 +22,5 @@ jobs:
           heroku_app_name: "greedy-association-web"
           heroku_email: ${{secrets.HEROKU_API_KEY}}
         env:
-          HD_APP_BASE: "frontend/src"
+          HD_APP_BASE: "frontend"
           HD_REACT_APP_API_URL: "greedy-association-api"
